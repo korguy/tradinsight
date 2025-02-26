@@ -153,11 +153,11 @@ export default function Home() {
         const symbolsParam = targets.join(',');
         
         // Fetch portfolio balances
-        // const portfolioResponse = await fetch(`/api/portfolio?symbols=${symbolsParam}`);
-        // if (!portfolioResponse.ok) {
-        //   throw new Error('Failed to fetch portfolio');
-        // }
-        // const portfolioData = await portfolioResponse.json();
+        const portfolioResponse = await fetch(`/api/portfolio?symbols=${symbolsParam}`);
+        if (!portfolioResponse.ok) {
+          throw new Error('Failed to fetch portfolio');
+        }
+        const portfolioData = await portfolioResponse.json();
         
         // Fetch current prices
         const pricesResponse = await fetch(`/api/prices?symbols=${symbolsParam}`);
@@ -165,7 +165,6 @@ export default function Home() {
           throw new Error('Failed to fetch prices');
         }
         const pricesData = await pricesResponse.json();
-        console.log(pricesData)
         
         // Calculate USD value of each asset and filter out values less than $1
         const portfolioWithValues: Record<string, number> = {};
