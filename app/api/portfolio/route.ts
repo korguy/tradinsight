@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     
     // Filter and format balances
     const symbolSet = new Set([...symbols.map(s => s.slice(0, 3)), 'USDT']);
-    const portfolio = {};
+    const portfolio: Record<string, number> = {};
     
     for (const balance of balances) {
       if (symbolSet.has(balance.asset)) {
