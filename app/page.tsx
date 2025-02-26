@@ -229,13 +229,13 @@ export default function Home() {
           <span className="text-sm text-red-500"><ChevronDown className="inline-block size-4" />0%</span> */}
         </div>
       </header>
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 h-screen">
         <div className="grid gap-6 md:grid-cols-1">
           <Card>
             <CardHeader>
               <CardTitle>Strategy Overview</CardTitle>
             </CardHeader>
-            <CardContent className="h-50 md:h-30 overflow-y-auto">
+            <CardContent className="md:h-full overflow-y-auto">
               <p>{strategyData.find(strategy => strategy.name === selectedStrategy)?.description}</p>
             </CardContent>
           </Card>
@@ -246,7 +246,7 @@ export default function Home() {
               <CardTitle>Portfolio</CardTitle>
               <CardDescription>{new Date().toLocaleDateString('en-CA')}</CardDescription>
             </CardHeader>
-            <CardContent className="md:h-65">
+            <CardContent className="md:h-full">
             <ChartContainer
               config={chartConfig}
               className="mx-auto aspect-square max-h-[250px] pb-0 [&_.recharts-pie-label-text]:fill-foreground"
@@ -271,7 +271,7 @@ export default function Home() {
               </div> */}
             </CardFooter>
           </Card>
-          <Card className="md:col-span-2">
+          <Card className="md:col-span-2 md:h-full">
             <CardHeader>
               <div className="flex justify-between">
                 <div>
