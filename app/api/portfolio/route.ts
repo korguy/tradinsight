@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 
-const BINANCE_BASE_URL = 'https://api.binance.us';
+const BINANCE_BASE_URL = process.env.BINANCE_END_POINT || '';
 const API_CLIENT = process.env.BINANCE_API_KEY || '';
 const API_SECRET = process.env.BINANCE_API_SECRET || '';
 

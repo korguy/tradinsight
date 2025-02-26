@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BINANCE_BASE_URL = 'https://api.binance.com';
+const BINANCE_BASE_URL = process.env.BINANCE_END_POINT || '';
 
 export async function GET(request: Request) {
   try {
