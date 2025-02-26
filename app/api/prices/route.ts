@@ -26,8 +26,6 @@ export async function GET(request: Request) {
     // Use URLSearchParams but don't encode the value
     const params = new URLSearchParams();
     params.append('symbols', symbolsJson);
-
-    console.log(`${url}?${params.toString().replace(/%2C/g, ',')}`);
     
     const response = await fetch(`${url}?${params.toString().replace(/%2C/g, ',')}`);
     

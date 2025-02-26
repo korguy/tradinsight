@@ -14,6 +14,25 @@ export async function GET(request: Request) {
     if (!symbolsParam) {
       return NextResponse.json({ error: 'Symbols parameter is required' }, { status: 400 });
     }
+
+    console.log(API_CLIENT)
+    
+    // Check if environment variables are set
+    if (!BINANCE_BASE_URL || !API_CLIENT || !API_SECRET) {
+      console.error('Missing Binance environment variables', { 
+        hasEndpoint: !!BINANCE_BASE_URL, 
+        hasApiKey: !!API_CLIENT, 
+        hasSecret: !!API_SECRET 
+      });
+      return NextResponse.json({ 
+        error: 'Binance API configuration missing', 
+        debug: { 
+          hasEndpoint: !!BINANCE_BASE_URL, 
+          hasApiKey: !!API_CLIENT, 
+          hasSecret: !!API_SECRET 
+        } 
+      }, { status: 500 });
+    }
     
     const symbols = symbolsParam.split(',');
     
@@ -37,7 +56,12 @@ export async function GET(request: Request) {
     
     if (!response.ok) {
       const errorData = await response.json();
-      return NextResponse.json({ error: errorData }, { status: response.status });
+      console.error('Binance API error:', { status: response.status, error: errorData });
+      return NextResponse.json({ 
+        error: 'Binance API error', 
+        details: errorData,
+        status: response.status
+      }, { status: response.status });
     }
     
     const data = await response.json();
@@ -56,6 +80,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ portfolio });
   } catch (error) {
     console.error('Error fetching portfolio:', error);
-    return NextResponse.json({ error: 'Failed to fetch portfolio' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to fetch portfolio', 
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 } 

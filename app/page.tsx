@@ -148,7 +148,6 @@ export default function Home() {
   React.useEffect(() => {
     async function fetchPortfolio() {
       if (!targets.length) return;
-      console.log(targets)
       try {
         setPortfolioLoading(true);
         const symbolsParam = targets.join(',');
