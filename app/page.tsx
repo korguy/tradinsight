@@ -165,6 +165,7 @@ export default function Home() {
           throw new Error('Failed to fetch prices');
         }
         const pricesData = await pricesResponse.json();
+        console.log(pricesData)
         
         // Calculate USD value of each asset and filter out values less than $1
         const portfolioWithValues: Record<string, number> = {};
