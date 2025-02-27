@@ -24,16 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+// import {
+//   Table,
+//   TableBody,
+//   TableCaption,
+//   TableCell,
+//   TableFooter,
+//   TableHead,
+//   TableHeader,
+//   TableRow,
+// } from "@/components/ui/table"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -68,10 +68,21 @@ export default function Home() {
   const [selectedStrategy, setSelectedStrategy] = React.useState<string>()
   const [selectedCrypto, setSelectedCrypto] = React.useState<string>("BTC");
   const [loading, setLoading] = React.useState(false);
-  const [analysis, setAnalysis] = React.useState<any[]>([])
+  const [technicalAnalysis, setTechnicalAnalysis] = React.useState<any>(null);
+  const [sentimentalAnalysis, setSentimentalAnalysis] = React.useState<any>(null);
+  const [technicalLoading, setTechnicalLoading] = React.useState(false);
+  const [sentimentalLoading, setSentimentalLoading] = React.useState(false);
   const [lastUpdate, setLastUpdate] = React.useState<string>("")
 
-  const [portfolio, setPortfolio] = React.useState<Record<string, number>>({});
+  // Update the interface for portfolio items
+  interface PortfolioItem {
+    id: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }
+
+  const [portfolio, setPortfolio] = React.useState<PortfolioItem[]>([]);
   const [portfolioLoading, setPortfolioLoading] = React.useState(false);
   
 
@@ -124,62 +135,92 @@ export default function Home() {
         .limit(1);
       
       if (error) {
-        console.error('Error fetching data:', error);
+        console.error(`Error fetching ${type} data:`, error);
         return null;
       }
-      setLastUpdate(data[0]?.created || "");
-      // Return the first (latest) record or null if no records found
-      return data && data.length > 0 ? data[0] : null;
+      
+      // Only update lastUpdate if we actually got data
+      if (data && data.length > 0) {
+        // Validate that the content field exists
+        if (!data[0].content) {
+          console.warn(`${type} analysis found but content field is missing or empty`);
+        }
+        
+        if (type === 'technical' || type === 'sentimental') {
+          setLastUpdate(data[0]?.created || "");
+        }
+        return data[0];
+      }
+      return null;
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error(`Unexpected error fetching ${type} data:`, error);
       return null;
     }
   }
+  
   React.useEffect(()=> {
-    async function fetchData() {
-      const technicalData = await fetchLatestData('technical');
-      const sentimentalData = await fetchLatestData('sentimental');
-      setAnalysis([technicalData, sentimentalData]);
+    async function fetchTechnicalAnalysis() {
+      if (!selectedStrategy || !selectedCrypto) return;
+      
+      setTechnicalLoading(true);
+      try {
+        const technicalData = await fetchLatestData('technical');
+        
+        // Detailed logging to help diagnose issues
+        console.log(`Technical data for ${selectedCrypto}:`, technicalData);
+        if (technicalData) {
+          console.log(`Technical content exists: ${Boolean(technicalData.content)}`);
+          if (technicalData.content) {
+            console.log(`Technical content length: ${technicalData.content.length}`);
+          }
+        }
+        
+        // Update technical analysis state
+        setTechnicalAnalysis(technicalData);
+      } catch (error) {
+        console.error('Error fetching technical analysis data:', error);
+      } finally {
+        setTechnicalLoading(false);
+      }
     }
     
-    fetchData();
-  }, [selectedCrypto, selectedStrategy])
+    fetchTechnicalAnalysis();
+  }, [selectedCrypto, selectedStrategy]);
+  
+  React.useEffect(()=> {
+    async function fetchSentimentalAnalysis() {
+      if (!selectedStrategy || !selectedCrypto) return;
+      
+      setSentimentalLoading(true);
+      try {
+        const sentimentalData = await fetchLatestData('sentimental');
+        
+        console.log(`Sentimental data for ${selectedCrypto}:`, sentimentalData);
+        
+        // Update sentimental analysis state
+        setSentimentalAnalysis(sentimentalData);
+      } catch (error) {
+        console.error('Error fetching sentimental analysis data:', error);
+      } finally {
+        setSentimentalLoading(false);
+      }
+    }
+    
+    fetchSentimentalAnalysis();
+  }, [selectedCrypto, selectedStrategy]);
 
   React.useEffect(() => {
     async function fetchPortfolio() {
       if (!targets.length) return;
       try {
         setPortfolioLoading(true);
-        const symbolsParam = targets.join(',');
+        const { data, error } = await supabase
+          .from('portfolio')
+          .select('*');
         
-        // Fetch portfolio balances
-        const portfolioResponse = await fetch(`/api/portfolio?symbols=${symbolsParam}`);
-        if (!portfolioResponse.ok) {
-          throw new Error('Failed to fetch portfolio');
+        if (data) {
+          setPortfolio(data);
         }
-        const portfolioData = await portfolioResponse.json();
-        
-        // Fetch current prices
-        const pricesResponse = await fetch(`/api/prices?symbols=${symbolsParam}`);
-        if (!pricesResponse.ok) {
-          throw new Error('Failed to fetch prices');
-        }
-        const pricesData = await pricesResponse.json();
-        
-        // Calculate USD value of each asset and filter out values less than $1
-        const portfolioWithValues: Record<string, number> = {};
-        
-        Object.entries(portfolioData.portfolio).forEach(([asset, balance]) => {
-          const price = asset === 'USDT' ? 1 : pricesData.prices[asset] || 0;
-          const usdValue = (balance as number) * price;
-          
-          // Only include assets with value >= $1
-          if (usdValue >= 1) {
-            portfolioWithValues[asset] = usdValue;
-          }
-        });
-        
-        setPortfolio(portfolioWithValues);
       } catch (error) {
         console.error('Error fetching portfolio:', error);
       } finally {
@@ -191,7 +232,7 @@ export default function Home() {
   }, [targets]);
 
   const portfolioChartData = React.useMemo(() => {
-    if (!portfolio || Object.keys(portfolio).length === 0) {
+    if (!portfolio || portfolio.length === 0) {
       return []; // Use placeholder data if portfolio is empty
     }
     
@@ -205,13 +246,13 @@ export default function Home() {
       // Add more as needed
     };
     
-    // Filter out zero balances and transform to chart format
-    return Object.entries(portfolio)
-      .filter(([_, value]) => value > 0)
-      .map(([asset, balance], index) => ({
-        cryptocurrency: asset, // Using 'browser' as the key since that's what your chart expects
-        balance: balance, // Using 'visitors' as the value key
-        fill: colors[asset as keyof typeof colors] || `var(--chart-${(index % 5) + 1})` 
+    // Transform portfolio items to chart format
+    return portfolio
+      .filter(item => item.quantity > 0)
+      .map((item, index) => ({
+        cryptocurrency: item.name,
+        balance: (item.quantity * item.price) < 1 ? 0 : item.quantity * item.price, // Calculate USD value, set to 0 if less than $1
+        fill: colors[item.name as keyof typeof colors] || `var(--chart-${(index % 5) + 1})` 
       }));
   }, [portfolio]);
 
@@ -260,10 +301,24 @@ export default function Home() {
                 />
               </PieChart>
             </ChartContainer>
+            {!portfolioLoading && portfolio.length > 0 && (
+              <div className="mt-4 text-center">
+                <p className="text-sm text-muted-foreground">Total Value</p>
+                <p className="text-xl font-bold">
+                  ${portfolio.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)}
+                </p>
+              </div>
+            )}
             </CardContent>
             <CardFooter className="flex-col gap-2 text-sm">
               <div className="flex items-center gap-2 font-medium leading-none">
-                Trending up by - this month <TrendingUp className="h-4 w-4" />
+                {portfolioLoading ? (
+                  "Loading portfolio data..."
+                ) : (
+                  <>
+                    Asset Distribution <span className="text-xs text-muted-foreground ml-1">(by USD value)</span>
+                  </>
+                )}
               </div>
               {/* <div className="leading-none text-muted-foreground">
                 Showing total visitors for the last 6 months
@@ -296,13 +351,53 @@ export default function Home() {
                 <div className="flex flex-col gap-2">
                   <Label className="font-semibold tracking-tight">Technical Analysis</Label>
                   <div className="text-xs overflow-y-auto md:h-80">
-                    <Markdown disallowedElements={["code"]}>{analysis[0]?.content}</Markdown>
+                    {technicalLoading ? (
+                      <div className="flex justify-center items-center h-full">
+                        <p>Loading technical analysis...</p>
+                      </div>
+                    ) : technicalAnalysis ? (
+                      <>
+                        {technicalAnalysis.content ? (
+                          <Markdown disallowedElements={['code']}>
+                            {technicalAnalysis.content}
+                          </Markdown>
+                        ) : (
+                          <div className="flex justify-center items-center h-full text-muted-foreground">
+                            <p>Technical analysis found but no content available</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex justify-center items-center h-full text-muted-foreground">
+                        <p>No technical analysis available for {selectedCrypto}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
                 <Label className="font-semibold tracking-tight">Sentimental Analysis</Label>
                   <div className="text-xs overflow-y-auto md:h-80">
-                    <Markdown disallowedElements={["code"]}>{analysis[1]?.content}</Markdown>
+                    {sentimentalLoading ? (
+                      <div className="flex justify-center items-center h-full">
+                        <p>Loading sentimental analysis...</p>
+                      </div>
+                    ) : sentimentalAnalysis ? (
+                      <>
+                        {sentimentalAnalysis.content ? (
+                          <Markdown disallowedElements={['code']}>
+                            {sentimentalAnalysis.content}
+                          </Markdown>
+                        ) : (
+                          <div className="flex justify-center items-center h-full text-muted-foreground">
+                            <p>Sentimental analysis found but no content available</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex justify-center items-center h-full text-muted-foreground">
+                        <p>No sentimental analysis available for {selectedCrypto}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
