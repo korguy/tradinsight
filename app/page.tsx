@@ -24,16 +24,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-// import {
-//   Table,
-//   TableBody,
-//   TableCaption,
-//   TableCell,
-//   TableFooter,
-//   TableHead,
-//   TableHeader,
-//   TableRow,
-// } from "@/components/ui/table"
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -72,7 +72,8 @@ export default function Home() {
   const [sentimentalAnalysis, setSentimentalAnalysis] = React.useState<any>(null);
   const [technicalLoading, setTechnicalLoading] = React.useState(false);
   const [sentimentalLoading, setSentimentalLoading] = React.useState(false);
-  const [lastUpdate, setLastUpdate] = React.useState<string>("")
+  const [lastUpdate, setLastUpdate] = React.useState<string>("");
+  const [decisions, setDecisions] = React.useState<any[]>([]);
 
   // Update the interface for portfolio items
   interface PortfolioItem {
@@ -157,6 +158,32 @@ export default function Home() {
       return null;
     }
   }
+
+  React.useEffect(() => {
+    async function fetchDecisions() {
+      try {
+        const { data, error } = await supabase
+        .from('decision')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching decisions:', error);
+      } else {
+        setDecisions(data);
+      }
+    } catch (error) {
+      console.error('Error fetching decisions:', error);
+    }
+  }
+
+  fetchDecisions();
+  }, []);
+
+  React.useEffect(() => {
+    console.log(decisions);
+  }, [decisions]);
   
   React.useEffect(()=> {
     async function fetchTechnicalAnalysis() {
@@ -401,38 +428,38 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-              {/* <div className="mt-4">
-                <Label className="font-semibold tracking-tight">Logs</Label>
-                <div className="md:h-40 overflow-y-auto border rounded">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-background">
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Take Profit</TableHead>
-                        <TableHead>Stop Loss</TableHead>
-                        <TableHead>Reason</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {reports[0].logs.map((log, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{log.date}</TableCell>
-                          <TableCell>{log.type}</TableCell>
-                          <TableCell>{log.price}</TableCell>
-                          <TableCell>{log.takeProfit}</TableCell>
-                          <TableCell>{log.stopLoss}</TableCell>
-                          <TableCell>{log.reason}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div> */}
             </CardContent>
           </Card>
         </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Decisions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="md:h-40 overflow-y-auto border rounded">
+            <Table>
+              <TableHeader className="sticky top-0 bg-background">
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Target</TableHead>
+                  <TableHead>Decision</TableHead>
+                  <TableHead>Reason</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {decisions.map((decision, index) => (
+                  <TableRow key={index}>
+                    <TableCell>{decision.created_at}</TableCell>
+                    <TableCell>{decision.target}</TableCell>
+                    <TableCell>{decision.decision}</TableCell>
+                    <TableCell>{decision.reason}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
       </div>
     </SidebarInset>
   </SidebarProvider>
