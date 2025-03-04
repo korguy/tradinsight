@@ -265,8 +265,8 @@ export default function Home() {
         
         if (data) {
           setPortfolio(data);
-          let totalValue = data.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)
-          let totalChange = (((totalValue - 50) / 50) * 100).toFixed(2)
+          const totalValue = data.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)
+          const totalChange = (((totalValue - 50) / 50) * 100).toFixed(2)
           setTotalChange(Number(totalChange))
         }
       } catch (error) {
