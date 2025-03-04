@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { ChevronUp, ChevronDown, TrendingUp, TrendingDown } from "lucide-react"
+import { ChevronUp, ChevronDown, TrendingUp, TrendingDown, EqualApproximately } from "lucide-react"
 import { Pie, PieChart } from "recharts"
 import { createClient } from '@supabase/supabase-js'
 import Markdown from 'react-markdown'
@@ -74,7 +74,8 @@ export default function Home() {
   const [sentimentalLoading, setSentimentalLoading] = React.useState(false);
   const [lastUpdate, setLastUpdate] = React.useState<string>("");
   const [decisions, setDecisions] = React.useState<any[]>([]);
-
+  const [changes, setChanges] = React.useState<number>(0);
+  const [totalChange, setTotalChange] = React.useState<number>(0);
   // Update the interface for portfolio items
   interface PortfolioItem {
     id: string;
@@ -174,16 +175,33 @@ export default function Home() {
         setDecisions(data);
       }
     } catch (error) {
-      console.error('Error fetching decisions:', error);
+        console.error('Error fetching decisions:', error);
+      }
     }
-  }
 
-  fetchDecisions();
+    fetchDecisions();
   }, []);
 
   React.useEffect(() => {
-    console.log(decisions);
-  }, [decisions]);
+    async function fetchChanges() {
+      try {
+        const { data, error } = await supabase
+        .from('change')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+        if (error) {
+          console.error('Error fetching changes:', error);
+        } else {
+          setChanges(data[0].value);
+        }
+      } catch (error) {
+        console.error('Error fetching changes:', error);
+      }
+    }
+    fetchChanges();
+  }, [])
   
   React.useEffect(()=> {
     async function fetchTechnicalAnalysis() {
@@ -247,6 +265,9 @@ export default function Home() {
         
         if (data) {
           setPortfolio(data);
+          let totalValue = data.reduce((sum, item) => sum + (item.quantity * item.price), 0).toFixed(2)
+          let totalChange = (((totalValue - 50) / 50) * 100).toFixed(2)
+          setTotalChange(Number(totalChange))
         }
       } catch (error) {
         console.error('Error fetching portfolio:', error);
@@ -291,9 +312,25 @@ export default function Home() {
         <SidebarTrigger />
         <span className="ml-2 text-lg font-semibold">{strategyData.find(strategy => strategy.name === selectedStrategy)?.name} Strategy</span>
         <div className="flex items-end font-mono">
-          {/* <span className="pl-3 text-sm text-green-500"><ChevronUp className="inline-block size-4" />0%</span>
+          {
+            changes > 0 ? (
+              <span className="pl-3 text-sm text-green-500"><ChevronUp className="inline-block size-4" />{changes}%</span>
+            ) : changes < 0 ? (
+              <span className="pl-3 text-sm text-red-500"><ChevronDown className="inline-block size-4" />{changes}%</span>
+            ) : (
+              <span className="pl-3 text-sm text-gray-500">0%</span>
+            )
+          }
           <span className="px-1 text-muted-foreground text-sm">/</span>
-          <span className="text-sm text-red-500"><ChevronDown className="inline-block size-4" />0%</span> */}
+          {
+            totalChange > 0 ? (
+              <span className="pl-1 text-sm text-green-500"><ChevronUp className="inline-block size-4" />{totalChange}%</span>
+            ) : totalChange < 0 ? (
+              <span className="pl-1 text-sm text-red-500"><ChevronDown className="inline-block size-4" />{totalChange}%</span>
+            ) : (
+              <span className="pl-1 text-sm text-gray-500">0%</span>
+            )
+          }
         </div>
       </header>
       <div className="p-6 space-y-6 h-screen">
@@ -343,7 +380,24 @@ export default function Home() {
                   "Loading portfolio data..."
                 ) : (
                   <>
-                    Asset Distribution <span className="text-xs text-muted-foreground ml-1">(by USD value)</span>
+                    Last 4 Hours: {changes}% {
+                      changes > 0 ? (
+                        <TrendingUp className="inline-block size-4" />
+                      ) : changes < 0 ? (
+                        <TrendingDown className="inline-block size-4" />
+                      ) : (
+                        <></>
+                      )
+                    }| Total: {totalChange}% 
+                    {
+                      totalChange > 0 ? (
+                        <TrendingUp className="inline-block size-4" />
+                      ) : totalChange < 0 ? (
+                        <TrendingDown className="inline-block size-4" />
+                      ) : (
+                        <></>
+                      )
+                    }
                   </>
                 )}
               </div>
